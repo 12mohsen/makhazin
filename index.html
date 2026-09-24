@@ -247,6 +247,10 @@ svg.bc{width:100%;height:11mm;fill:#000}
 .bk-top{display:grid;grid-template-columns:1fr 1fr;gap:14px}.bk-box{border:1px solid var(--border,rgba(128,128,128,.25));border-radius:14px;padding:14px}.bk-box h4{margin:0 0 10px}
 @media(max-width:720px){.bk-top{grid-template-columns:1fr}}
 @keyframes rowflash{0%,60%{background:rgba(99,102,241,.28)}100%{background:transparent}}tr.row-flash td{animation:rowflash 2.6s ease-out}
+/* الجوال: منع اتساع الصفحة بسبب الجداول داخل الشبكات */
+.grid>*,.card,.main,#main,.row>*{min-width:0}.tbl-wrap{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+@media(max-width:900px){html,body{overflow-x:hidden;max-width:100%}}
+@media(max-width:900px){body:has(#side.open)::after{content:'';position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:40;pointer-events:none}#side.open{z-index:50}}
 </style>
 </head>
 <body>
@@ -1517,6 +1521,8 @@ async function bkAutoTick(){const A=bkAuto();if(!A||bkAutoBusy||!SYNC.on||!navig
  catch(e){console.warn('auto backup',e)}finally{bkAutoBusy=false}}
 setTimeout(bkAutoTick,20000);setInterval(bkAutoTick,600000);
 
+/* الجوال: إغلاق القائمة الجانبية عند اللمس خارجها */
+document.addEventListener('click',e=>{const sd=$('#side');if(!sd||!sd.classList.contains('open'))return;if(e.target.closest('#side')||e.target.closest('#menuBtn'))return;sd.classList.remove('open')},true);
 /* ---------- Boot ---------- */
 (function fixGluedNames(){let n=0;DB.products.forEach(p=>{const m=String(p.name||'').match(/^(\d{8,14})\s*([^\d].*)$/);if(m&&/[\u0600-\u06FFA-Za-z]/.test(m[2][0])){p.name=m[2].trim();n++}});if(n){save();setTimeout(()=>toast('تم تصحيح اسم '+n+' منتج دخل فيه باركود بالخطأ','ok'),1200)}})();
 (function fixSavedBarcodes(){let n=0;DB.products.forEach(p=>{if(!p.barcode)return;const d=asciiDecode(p.barcode);if(d&&!DB.products.some(x=>x!==p&&x.barcode===d)){p.barcode=d;n++}});if(n){save();setTimeout(()=>toast('تم تصحيح باركود '+n+' منتج تلقائياً','ok'),800)}})();
