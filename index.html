@@ -1377,8 +1377,11 @@ function csEnhance(root){if(!root||root.nodeType!==1)return;if(root.matches&&roo
 const SYNC_KEY='mk_sync_cfg',SHADOW_KEY='mk_sync_shadow';
 let SYNC=(()=>{try{return JSON.parse(localStorage.getItem(SYNC_KEY))||{}}catch(e){return{}}})();
 let SHADOW=(()=>{try{return JSON.parse(localStorage.getItem(SHADOW_KEY))||{}}catch(e){return{}}})();
-const syncSave=()=>{try{localStorage.setItem(SYNC_KEY,JSON.stringify(SYNC));localStorage.setItem(SHADOW_KEY,JSON.stringify(SHADOW))}catch(e){}};
+const syncSave=()=>{try{if(SYNC.on&&!SYNC.schema&&typeof SYNC_SCHEMA!=='undefined')SYNC.schema=SYNC_SCHEMA;localStorage.setItem(SYNC_KEY,JSON.stringify(SYNC));localStorage.setItem(SHADOW_KEY,JSON.stringify(SHADOW))}catch(e){}};
 const SYNC_COLLS=['users','roles','products','suppliers','supplierPayments','customers','customerPayments','sales','purchases','movements','expenses','logs'];
+/* عند إضافة أنواع بيانات جديدة للمزامنة: أعد التنزيل الكامل مرة واحدة حتى تصل السجلات التي تجاهلتها النسخة الأقدم */
+const SYNC_SCHEMA='v2:'+SYNC_COLLS.join(',');
+if(SYNC.on&&SYNC.schema!==SYNC_SCHEMA){SYNC.cursor=null;SYNC.schema=SYNC_SCHEMA;try{localStorage.setItem(SYNC_KEY,JSON.stringify(SYNC))}catch(e){}}
 const SORT_BY_DATE=['sales','purchases','movements','expenses','logs','supplierPayments'];
 let syncBusy=false,syncTimer=null,syncState='off',syncPendingN=0;
 function fnv(s){let h=0x811c9dc5;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return(h>>>0).toString(36)+s.length.toString(36)}
