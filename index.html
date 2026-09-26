@@ -142,6 +142,11 @@ td.num{font-variant-numeric:tabular-nums}
 .qty input{width:52px;text-align:center;padding:4px}
 .totals{border-top:1px solid var(--border);padding-top:10px;margin-top:6px;display:grid;gap:5px}
 .totals .tr{display:flex;justify-content:space-between;gap:10px}
+.totals.hov{gap:2px}
+.totals.hov .tr:not(.grand){padding:8px 12px;margin:0 -12px;border-radius:12px;transition:background .15s,box-shadow .15s,transform .15s;cursor:default}
+.totals.hov .tr:not(.grand):hover{background:color-mix(in srgb,var(--primary) 12%,var(--surface));box-shadow:0 8px 22px rgba(0,0,0,.22),0 0 0 1px color-mix(in srgb,var(--primary) 40%,transparent);transform:translateY(-1px)}
+.totals.hov .tr:not(.grand):hover span{color:var(--text)}
+
 .totals .grand{font-size:26px;font-weight:800;color:var(--primary);padding-top:6px;border-top:1px dashed var(--border)}
 .paybtns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
 .paytabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
@@ -1201,7 +1206,7 @@ function renderReport(){const inR=d=>{const k=dayKey(d);return(!repF.from||k>=re
  const tp={};S.forEach(s=>s.items.forEach(i=>{const t=tp[i.name]||(tp[i.name]={q:0,v:0,p:0});t.q+=i.qty;t.v+=i.qty*i.price;t.p+=i.qty*(i.price-i.cost)}));const top=Object.entries(tp).sort((a,b)=>b[1].v-a[1].v).slice(0,10);
  const byU={};S.forEach(s=>{const t=byU[s.userName]||(byU[s.userName]={n:0,v:0,c:0,k:0});t.n++;t.v+=s.total;t.c+=s.payments.cash;t.k+=s.payments.card});
  $('#repBody').innerHTML=`<div class="grid g4" style="margin-bottom:16px"><div class="card kpi c1"><div class="ki">💰</div><div class="kv">${money(gross)}</div><div class="kl">إجمالي المبيعات (${S.length} فاتورة)</div></div><div class="card kpi c5"><div class="ki">🧾</div><div class="kv">${money(vat)}</div><div class="kl">ضريبة القيمة المضافة المحصّلة</div></div><div class="card kpi c2"><div class="ki">📈</div><div class="kv">${money(gp)}</div><div class="kl">مجمل الربح</div></div><div class="card kpi ${gp-exp>=0?'c2':'c4'}"><div class="ki">🏦</div><div class="kv">${money(gp-exp)}</div><div class="kl">صافي الربح بعد المصروفات</div></div></div>
- <div class="grid g2" style="margin-bottom:16px"><div class="card"><h3>📋 الملخص المالي</h3><div class="totals" style="border:0">
+ <div class="grid g2" style="margin-bottom:16px"><div class="card"><h3>📋 الملخص المالي</h3><div class="totals hov" style="border:0">
   <div class="tr"><span>المبيعات شاملة الضريبة</span><b>${money(gross)}</b></div><div class="tr"><span>الخصومات الممنوحة</span><b>${money(disc)}</b></div><div class="tr"><span>المبيعات بدون ضريبة</span><b>${money(net)}</b></div><div class="tr"><span>تكلفة البضاعة المباعة</span><b>${money(cost)}</b></div><div class="tr"><span>مجمل الربح</span><b style="color:var(--ok)">${money(gp)}</b></div><div class="tr"><span>المصروفات</span><b style="color:var(--bad)">${money(exp)}</b></div><div class="tr"><span>المرتجعات</span><b>${R.length} فاتورة · ${money(R.reduce((x,s)=>x+saleRetAmount(s),0))}</b></div><div class="tr"><span>المشتريات خلال الفترة</span><b>${money(pur)}</b></div><div class="tr grand"><span>صافي الربح</span><span>${money(gp-exp)}</span></div></div></div>
   <div class="card"><h3>💳 حسب طريقة الدفع</h3><div class="bar-list">${[['💵 نقداً',cash],['💳 بطاقة',card],['⏳ '+tr('آجل (دين)'),S.reduce((x,s)=>x+(s.payments.credit||0),0)],['💰 '+tr('تحصيل ديون العملاء'),(DB.customerPayments||[]).filter(p=>inR(p.date)).reduce((x,p)=>x+(+p.amount||0),0)]].map(([n,v])=>`<div class="bl"><span>${n}</span><b>${money(v)}</b><div class="bt"><i style="width:${gross?v/gross*100:0}%"></i></div></div>`).join('')}</div>
   <h3 style="margin-top:18px">👤 حسب الكاشير</h3>${Object.keys(byU).length?`<div class="tbl-wrap"><table><thead><tr><th>الكاشير</th><th>فواتير</th><th>نقداً</th><th>بطاقة</th><th>الإجمالي</th></tr></thead><tbody>${Object.entries(byU).map(([n,t])=>`<tr><td>${esc(n)}</td><td>${t.n}</td><td>${fmtN(t.c)}</td><td>${fmtN(t.k)}</td><td><b>${money(t.v)}</b></td></tr>`).join('')}</tbody></table></div>`:'<p class="muted">—</p>'}</div></div>
