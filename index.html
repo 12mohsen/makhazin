@@ -1413,6 +1413,10 @@ function setSkew(k){const was=clockSkew();SYNC.skew=Math.round(k);SYNC.skewAt=Da
  if(now&&!was){try{log('ساعة الجهاز غير مضبوطة',fmtSkew(now))}catch(e){}toast('⚠️ '+tr('ساعة هذا الجهاز غير مضبوطة')+' ('+fmtSkew(now)+') — '+tr('يُسجَّل الوقت الصحيح تلقائياً'),'warn')}
  if(!now&&was){try{log('تم ضبط ساعة الجهاز','')}catch(e){}}updClockWarn()}
 function fmtSkew(k){const m=Math.round(Math.abs(k)/60000),d=Math.floor(m/1440),h=Math.floor(m%1440/60),mm=m%60;return(k<0?tr('متأخرة'):tr('متقدمة'))+' '+(d?d+' '+tr('يوم')+' ':'')+(h?h+' '+tr('ساعة')+' ':'')+(!d&&mm?mm+' '+tr('دقيقة'):'')}
+/* كشف تغيير ساعة الجهاز أثناء عمل البرنامج (بمقارنة مؤقّت ثابت لا يتأثر بتغيير الساعة) → إعادة القياس من الخادم */
+window.__needProbe=true;
+(function(){let b={d:Date.now(),p:performance.now()};setInterval(()=>{const dd=(Date.now()-b.d)-(performance.now()-b.p);b={d:Date.now(),p:performance.now()};
+ if(Math.abs(dd)>60000&&typeof SYNC!=='undefined'&&SYNC.on){SYNC.skew=0;syncSave();window.__needProbe=true;window.__skewProbe=null;updClockWarn();if(typeof scheduleSync==='function')scheduleSync(300)}},10000)})();
 function updClockWarn(){const k=clockSkew();$$('.clock-warn').forEach(el=>{el.classList.toggle('hidden',!k);el.textContent='⏰ '+tr('ساعة الجهاز غير مضبوطة');el.title=k?fmtSkew(k):''})}
 function clockInfo(){const k=clockSkew();modal('⏰ '+tr('ساعة الجهاز غير مضبوطة'),`<p style="line-height:1.9">${tr('تاريخ/وقت هذا الجهاز يختلف عن وقت الخادم')}: <b>${fmtSkew(k)}</b>.</p><p style="line-height:1.9;margin-top:8px">${tr('لحماية سجلاتك، يُسجِّل البرنامج الوقت الصحيح تلقائياً لكل فاتورة وحركة جديدة بدل وقت الجهاز، وتم تسجيل ذلك في سجل النشاط. اضبط تاريخ ووقت الجهاز من إعدادات النظام.')}</p><p class="muted small" style="margin-top:8px">${tr('الوقت الصحيح الآن')}: <b>${fmtDate(nowISO())}</b></p>`)}
 /* ---- الاتصال بـ Supabase عبر REST (بدون مكتبات خارجية) ---- */
@@ -1433,7 +1437,11 @@ function pendingChanges(){const L=localRecords(),ch=[];for(const c in L){const s
   for(const r of L[c]){if(!r||r.id==null)continue;const id=String(r.id);seen.add(id);const h=recHash(c,r);if(sh[id]!==h)ch.push({coll:c,id,data:r,deleted:false,h})}
   for(const id in sh)if(!seen.has(id)&&sh[id]!=='x'&&!String(sh[id]).startsWith('~'))ch.push({coll:c,id,data:{},deleted:true,h:'x'})}
  return ch}
-async function pushChanges(){const ch=pendingChanges();syncPendingN=ch.length;if(!ch.length)return 0;
+async function pushChanges(){const ch=pendingChanges();syncPendingN=ch.length;
+ if(!ch.length){if(window.__needProbe||!SYNC.skewAt||Date.now()-SYNC.skewAt>15*60000){const hb={coll:'devices',id:String(SYNC.tag||'X'),data:{tag:SYNC.tag||'',user:(me()||{}).name||'',local:new Date().toISOString(),ua:navigator.userAgent.slice(0,90)},deleted:false};
+   window.__skewProbe={coll:hb.coll,id:hb.id,t:Date.now()};window.__needProbe=false;
+   if(SYNC.mode==='user')await mkRpc('mk_push',{p_token:SYNC.token,p_rows:[hb]});else await api('POST','/rest/v1/mk_records?on_conflict=store_id,coll,id',[{store_id:SYNC.uid,...hb}],{Prefer:'resolution=merge-duplicates,return=minimal'})}
+  return 0}
  const order=['settings','lists','roles','users','suppliers','customers','products','movements','sales','purchases','supplierPayments','customerPayments','expenses','logs'];ch.sort((a,b)=>order.indexOf(a.coll)-order.indexOf(b.coll));
  for(let i=0;i<ch.length;i+=400){const b=ch.slice(i,i+400);
   if(!window.__skewProbe&&b[0])window.__skewProbe={coll:b[0].coll,id:b[0].id,t:Date.now()};
