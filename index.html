@@ -613,14 +613,14 @@ function renderAuth(mode='login'){
   if(mode==='register'){
    if(f.password!==f.password2)return toast('كلمتا المرور غير متطابقتين','bad');
    if(cloud){const bt=e.target.querySelector('button.primary');bt.disabled=true;try{const j=await mkRpc('mk_register',{p_name:f.name.trim(),p_username:un,p_pass:await hash(f.password),p_store:(APPCFG()||{}).store||SYNC.store||null});if(!j||j.error)return toast(MK_ERR[j&&j.error]||'تعذّر إرسال الطلب','bad');toast('✅ تم إرسال طلبك — بانتظار موافقة المدير','ok');return renderAuth('login')}catch(x){return toast(x.message,'bad')}finally{bt.disabled=false}}
-   if(DB.users.some(u=>u.username===un))return toast('اسم المستخدم مستخدم مسبقاً','bad');
+   if(DB.users.some(u=>String(u.username||'').toLowerCase().replace(/\s+/g,'')===un.replace(/\s+/g,'')))return toast('اسم المستخدم مستخدم مسبقاً','bad');
    const u={id:uid(),name:f.name.trim(),username:un,pass:await hash(f.password),role:first?'admin':'cashier',active:first,created:nowISO()};
    DB.users.push(u);
    if(first){SESSION=u.id;localStorage.setItem(SS_KEY,u.id);log('إنشاء حساب المدير',u.name);save();toast('تم إنشاء حساب المدير ✅','ok');return renderApp()}
    DB.logs.unshift({id:uid(),date:nowISO(),user:u.name,action:'طلب تسجيل حساب جديد',details:un});save();
    toast('تم إنشاء حسابك، بانتظار تفعيل المدير','ok');renderAuth('login');
   }else{
-   const hp=await hash(f.password),cand=DB.users.filter(x=>String(x.username||'').toLowerCase()===un&&x.pass===hp),u=cand.find(x=>x.active)||cand[0];
+   const uK=v=>String(v||'').toLowerCase().replace(/\s+/g,''),hp=await hash(f.password),cand=DB.users.filter(x=>x.pass===hp&&(uK(x.username)===uK(un)||uK(x.name)===uK(un))),u=cand.find(x=>x.active)||cand[0];
    if(!u&&cloud){const bt=e.target.querySelector('button.primary'),bl=bt.textContent;bt.disabled=true;bt.textContent='⏳ …';
     try{const j=await cloudLogin(un,hp);await syncNow(true);if(SYNC.lastErr)throw new Error(SYNC.lastErr);const cu=DB.users.find(x=>x.id===j.user_id);if(!cu)throw new Error('تعذّر تحميل بيانات المستخدم');
      SESSION=cu.id;(f.remember?localStorage:sessionStorage).setItem(SS_KEY,cu.id);cu.lastLogin=nowISO();log('تسجيل دخول','☁️');save();toast('☁️ '+tr('تم الدخول وتحميل بيانات المتجر'),'ok');return renderApp()}
@@ -1241,7 +1241,7 @@ PAGES.users=()=>{const u=me();const DUP=dupUsers();
  $$('[data-role]').forEach(s=>s.onchange=()=>{const x=byId(DB.users,s.dataset.role);x.role=s.value;log('تغيير دور مستخدم',`${x.name} ← ${roleName(s.value)}`);save();toast('تم تحديث الدور','ok')});
  $$('input[data-r]').forEach(c=>c.onchange=()=>{const r=byId(DB.roles,c.dataset.r);if(c.checked)r.perms.push(c.dataset.k);else r.perms=r.perms.filter(p=>p!==c.dataset.k);log('تعديل صلاحيات',r.name);save();toast('تم الحفظ','ok')});updateBadges()};
 function userForm(){const w=modal('＋ مستخدم جديد',`<form id="uf"><div class="field"><label>الاسم الكامل</label><input type="text" name="name" required autofocus></div><div class="field"><label>اسم المستخدم</label><input type="text" name="username" required></div><div class="field"><label>كلمة المرور</label><input type="password" name="password" required minlength="4"></div><div class="field"><label>الدور</label><select name="role">${DB.roles.map(r=>`<option value="${r.id}" ${r.id==='cashier'?'selected':''}>${esc(r.name)}</option>`).join('')}</select></div><div class="modal-f"><button class="btn primary">إنشاء</button></div></form>`);
- w.querySelector('#uf').onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target)),un=f.username.trim().toLowerCase();if(DB.users.some(u=>u.username===un))return toast('اسم المستخدم مستخدم مسبقاً','bad');
+ w.querySelector('#uf').onsubmit=async e=>{e.preventDefault();const f=Object.fromEntries(new FormData(e.target)),un=f.username.trim().toLowerCase();if(DB.users.some(u=>String(u.username||'').toLowerCase().replace(/\s+/g,'')===un.replace(/\s+/g,'')))return toast('اسم المستخدم مستخدم مسبقاً','bad');
   DB.users.push({id:uid(),name:f.name.trim(),username:un,pass:await hash(f.password),role:f.role,active:true,created:nowISO()});log('إنشاء مستخدم',`${f.name} (${roleName(f.role)})`);save();w.close();toast('تم إنشاء المستخدم','ok');PAGES.users()}}
 function toggleUser(id){const x=byId(DB.users,id);x.active=!x.active;x.disabledByAdmin=!x.active;log(x.active?'تفعيل مستخدم':'إيقاف مستخدم',x.name);save();PAGES.users()}
 function resetPass(id){const x=byId(DB.users,id);const w=modal('🔑 تعيين كلمة مرور — '+esc(x.name),`<div class="field"><label>كلمة المرور الجديدة</label><input id="np" type="text" autofocus></div><div class="modal-f"><button class="btn primary" id="nok">حفظ</button></div>`);
