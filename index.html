@@ -1390,7 +1390,8 @@ function csClose(){if(!CS.open)return;const o=CS.open;CS.open=null;o.panel.remov
 function csPlace(){const o=CS.open;if(!o)return;if(!o.btn.isConnected)return csClose();const r=o.btn.getBoundingClientRect(),vh=innerHeight,p=o.panel;
  p.style.minWidth=Math.max(r.width,180)+'px';if(LANG!=='ar'){p.style.left=Math.max(8,r.left)+'px';p.style.right='auto'}else{p.style.right=Math.max(8,innerWidth-r.right)+'px';p.style.left='auto'}
  const below=vh-r.bottom-12,above=r.top-12,want=Math.min(p.scrollHeight,340);
- if(below<want&&above>below){p.style.top='auto';p.style.bottom=(vh-r.top+6)+'px';p.style.maxHeight=Math.min(340,above)+'px'}else{p.style.bottom='auto';p.style.top=(r.bottom+6)+'px';p.style.maxHeight=Math.max(150,Math.min(340,below))+'px'}}
+ if(below<want&&above>below){p.style.top='auto';p.style.bottom=(vh-r.top+6)+'px';p.style.maxHeight=Math.min(340,above)+'px'}else{p.style.bottom='auto';p.style.top=(r.bottom+6)+'px';p.style.maxHeight=Math.max(150,Math.min(340,below))+'px'}
+ const pr=p.getBoundingClientRect();if(pr.bottom>vh-4||pr.top<4){const h=Math.min(pr.height,vh-16);p.style.bottom='auto';p.style.maxHeight=h+'px';p.style.top=Math.max(8,Math.min(pr.top,vh-h-8))+'px'}}
 function csOpen(btn,items,cur,onPick,{search=false,filterFrom=null,startHi=null,onClose}={}){csClose();
  const panel=document.createElement('div');panel.className='cs-panel';panel.innerHTML=(search?'<div class="cs-search"><input type="text" placeholder="🔍 بحث…" autocomplete="off"></div>':'')+'<div class="cs-list" role="listbox"></div>';
  document.body.appendChild(panel);btn.classList.add('open');const listEl=panel.querySelector('.cs-list'),sIn=panel.querySelector('.cs-search input');
@@ -1408,12 +1409,13 @@ function csOpen(btn,items,cur,onPick,{search=false,filterFrom=null,startHi=null,
    if(e.key==='ArrowUp'){e.preventDefault();hi=Math.max(hi-1,0);mark();return true}
    if(e.key==='Enter'&&hi>=0&&view[hi]){e.preventDefault();e.stopImmediatePropagation();const it=view[hi];csClose();onPick(it);return true}
    if(e.key==='Tab'){csClose();return false}return false}};
- if(sIn){sIn.oninput=()=>{q=sIn.value;hi=0;render()};setTimeout(()=>sIn.focus(),0)}
+ if(sIn){sIn.oninput=()=>{q=sIn.value;hi=0;render()};if(!(window.matchMedia&&matchMedia('(pointer:coarse)').matches))setTimeout(()=>sIn.focus(),0)}
  hi=startHi!==null?startHi:Math.max(0,items.findIndex(it=>it.value===cur));if(filterFrom&&startHi===null)hi=-1;
  render();const s=listEl.querySelector('.sel')||listEl.querySelector('.on');if(s)s.scrollIntoView({block:'nearest'})}
 document.addEventListener('keydown',e=>{if(CS.open)CS.open.key(e)},true);
 document.addEventListener('mousedown',e=>{if(CS.open&&!CS.open.panel.contains(e.target)&&e.target!==CS.open.btn)csClose()},true);
-window.addEventListener('resize',csClose);document.addEventListener('scroll',e=>{if(CS.open&&!CS.open.panel.contains(e.target))csPlace()},true);
+/* على الجوال: ظهور لوحة المفاتيح يغيّر ارتفاع الشاشة فقط — نعيد تموضع القائمة بدل إغلاقها */
+let csW=innerWidth;window.addEventListener('resize',()=>{if(!CS.open){csW=innerWidth;return}if(Math.abs(innerWidth-csW)>40){csW=innerWidth;csClose()}else{const r=CS.open.btn.getBoundingClientRect();if(r.bottom>innerHeight||r.top<0)try{CS.open.btn.scrollIntoView({block:'center'})}catch(e){}csPlace()}});document.addEventListener('scroll',e=>{if(CS.open&&!CS.open.panel.contains(e.target))csPlace()},true);
 
 function csEnhanceSelect(sel){if(sel.__cs||sel.multiple||sel.closest('#printArea'))return;sel.__cs=1;
  const btn=document.createElement('button');btn.type='button';btn.className='cs-btn';btn.style.cssText=sel.style.cssText;
