@@ -1589,8 +1589,11 @@ function csEnhance(root){if(!root||root.nodeType!==1)return;if(root.matches&&roo
    ========================================================= */
 const SYNC_KEY='mk_sync_cfg',SHADOW_KEY='mk_sync_shadow';
 let SYNC=(()=>{try{return JSON.parse(localStorage.getItem(SYNC_KEY))||{}}catch(e){return{}}})();
+/* حارس المفتاح: مفتاح JWT قديم (eyJ…) محفوظ في المتصفح لنفس المشروع يُستبدل بالمفتاح المدمج في config.js (توكن الجلسة لا يُمس) */
+function mkKeyGuard(){try{const c=window.MK_CONFIG||(window.SUPABASE_URL&&window.SUPABASE_ANON_KEY?{url:window.SUPABASE_URL,key:window.SUPABASE_ANON_KEY}:null);if(!c||!SYNC)return false;const ck=String(c.key||'').trim(),u=v=>String(v||'').trim().replace(/\/+$/,'');if(/^eyJ/.test(String(SYNC.key||'').trim())&&ck&&!/^eyJ/.test(ck)&&u(c.url)===u(SYNC.url)){SYNC.key=ck;return true}}catch(e){}return false}
+if(mkKeyGuard())try{localStorage.setItem(SYNC_KEY,JSON.stringify(SYNC))}catch(e){}
 let SHADOW=(()=>{try{return JSON.parse(localStorage.getItem(SHADOW_KEY))||{}}catch(e){return{}}})();
-const syncSave=()=>{if(window.__resetting)return;try{if(SYNC.on&&!SYNC.schema&&typeof SYNC_SCHEMA!=='undefined')SYNC.schema=SYNC_SCHEMA;localStorage.setItem(SYNC_KEY,JSON.stringify(SYNC));localStorage.setItem(SHADOW_KEY,JSON.stringify(SHADOW))}catch(e){}};
+const syncSave=()=>{if(window.__resetting)return;mkKeyGuard();try{if(SYNC.on&&!SYNC.schema&&typeof SYNC_SCHEMA!=='undefined')SYNC.schema=SYNC_SCHEMA;localStorage.setItem(SYNC_KEY,JSON.stringify(SYNC));localStorage.setItem(SHADOW_KEY,JSON.stringify(SHADOW))}catch(e){}};
 const SYNC_COLLS=['users','roles','products','suppliers','supplierPayments','customers','customerPayments','sales','purchases','movements','expenses','logs'];
 /* عند إضافة أنواع بيانات جديدة للمزامنة: أعد التنزيل الكامل مرة واحدة حتى تصل السجلات التي تجاهلتها النسخة الأقدم */
 const SYNC_SCHEMA='v2:'+SYNC_COLLS.join(',');
